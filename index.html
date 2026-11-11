@@ -8,19 +8,85 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script>
+  // Tema: di default segue il sistema (prefers-color-scheme). Si forza con ?theme=dark o ?theme=light
+  // nell'indirizzo, oppure la pagina ospitante lo comunica con postMessage (vedi README).
+  (function () {
+    try {
+      var t = new URLSearchParams(location.search).get("theme");
+      if (t === "dark" || t === "light") document.documentElement.setAttribute("data-theme", t);
+    } catch (e) {}
+  })();
+</script>
 <style>
   :root {
+    color-scheme: light;
     --bg: #ffffff;
+    --surface: #ffffff;    /* campo di ricerca, tooltip, menu, pulsanti */
     --ink: #1a1a1a;
     --ink-2: #4a4a4a;      /* testo secondario: 8.9:1 su bianco */
     --ink-3: #636363;      /* note: 6.0:1 su bianco */
     --rule: #d9d9d9;
     --rule-soft: #ececec;
-    --accent: #1b5596;
+    --field-border: #8a8a8a;
     --focus: #0b57d0;
+    --hover: #e8f0fa;      /* voce evidenziata nel menu */
+    --row-focus: #f4f7fb;
+    --shadow: rgba(0,0,0,.12);
     --empty: #e6e6e6;      /* province senza scuole: grigio chiaro, non bianco */
+    --empty-outline: #cfcfcf;
     --c1: #8db9e2; --c2: #5e9bd3; --c3: #3478bb; --c4: #1b5596; --c5: #0b3263;
+    --ev-si-bg: #fde8e4; --ev-si-fg: #8a1c0c;
+    --ev-no-bg: #e7f3ec; --ev-no-fg: #1d5a35;
+    --ev-nd-bg: #f0f0f0; --ev-nd-fg: #555555;
+    --err: #8a1c0c;
     --row-h: 3.25rem;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #14171c;
+      --surface: #1d2127;
+      --ink: #e8eaed;
+      --ink-2: #b8bdc5;
+      --ink-3: #9ca2ab;
+      --rule: #3a4048;
+      --rule-soft: #272c33;
+      --field-border: #7d848d;
+      --focus: #7fb0ff;
+      --hover: #26344a;
+      --row-focus: #1b2330;
+      --shadow: rgba(0,0,0,.5);
+      --empty: #2a2f36;
+      --empty-outline: #404750;
+      --c1: #2e5f93; --c2: #4580bd; --c3: #67a1d6; --c4: #97c0e8; --c5: #cfe3f6;
+      --ev-si-bg: #4a1f1a; --ev-si-fg: #ffb4a8;
+      --ev-no-bg: #1c3a28; --ev-no-fg: #8fd9a8;
+      --ev-nd-bg: #2b3037; --ev-nd-fg: #b8bdc5;
+      --err: #ffb4a8;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #14171c;
+    --surface: #1d2127;
+    --ink: #e8eaed;
+    --ink-2: #b8bdc5;
+    --ink-3: #9ca2ab;
+    --rule: #3a4048;
+    --rule-soft: #272c33;
+    --field-border: #7d848d;
+    --focus: #7fb0ff;
+    --hover: #26344a;
+    --row-focus: #1b2330;
+    --shadow: rgba(0,0,0,.5);
+    --empty: #2a2f36;
+    --empty-outline: #404750;
+    --c1: #2e5f93; --c2: #4580bd; --c3: #67a1d6; --c4: #97c0e8; --c5: #cfe3f6;
+    --ev-si-bg: #4a1f1a; --ev-si-fg: #ffb4a8;
+    --ev-no-bg: #1c3a28; --ev-no-fg: #8fd9a8;
+    --ev-nd-bg: #2b3037; --ev-nd-fg: #b8bdc5;
+    --err: #ffb4a8;
   }
   * { box-sizing: border-box; }
   html { -webkit-text-size-adjust: 100%; }
@@ -44,12 +110,12 @@
   /* mappa */
   .map-box { position: relative; }
   #map { display: block; width: 100%; height: auto; max-height: 78vh; margin: 0 auto; }
-  #map path.prov { stroke: #ffffff; stroke-width: .6; stroke-linejoin: round; cursor: pointer; }
+  #map path.prov { stroke: var(--bg); stroke-width: .6; stroke-linejoin: round; cursor: pointer; }
   #map path.prov:hover { stroke: var(--ink); stroke-width: 1.2; }
   #map path.sel { stroke: var(--ink); stroke-width: 1.6; }
-  .tip { position: absolute; pointer-events: none; background: #fff; border: 1px solid var(--rule);
+  .tip { position: absolute; pointer-events: none; background: var(--surface); color: var(--ink); border: 1px solid var(--rule);
          border-radius: 6px; padding: .35rem .55rem; font-size: .8rem; line-height: 1.3;
-         box-shadow: 0 2px 8px rgba(0,0,0,.12); white-space: nowrap; opacity: 0; transition: opacity .08s; }
+         box-shadow: 0 2px 8px var(--shadow); white-space: nowrap; opacity: 0; transition: opacity .08s; }
   .tip b { font-weight: 600; display: block; }
 
   /* ricerca (combobox) */
@@ -58,7 +124,7 @@
   .search .field { position: relative; }
   .search input {
     width: 100%; font: inherit; font-size: 1rem; padding: .55rem 2.4rem .55rem .7rem;
-    border: 1px solid #8a8a8a; border-radius: 6px; background: #fff; color: var(--ink);
+    border: 1px solid var(--field-border); border-radius: 6px; background: var(--surface); color: var(--ink);
   }
   .search input:focus { outline: 2px solid var(--focus); outline-offset: 1px; border-color: var(--focus); }
   .clear { position: absolute; right: .25rem; top: 50%; transform: translateY(-50%); border: 0;
@@ -67,12 +133,12 @@
   .clear:focus-visible { outline: 2px solid var(--focus); }
   .clear[hidden] { display: none; }
   #prov-list { position: absolute; z-index: 5; left: 0; right: 0; top: 100%; margin: 2px 0 0; padding: 4px 0;
-               list-style: none; background: #fff; border: 1px solid var(--rule); border-radius: 6px;
-               box-shadow: 0 4px 14px rgba(0,0,0,.12); max-height: 15rem; overflow-y: auto; }
+               list-style: none; background: var(--surface); color: var(--ink); border: 1px solid var(--rule); border-radius: 6px;
+               box-shadow: 0 4px 14px var(--shadow); max-height: 15rem; overflow-y: auto; }
   #prov-list[hidden] { display: none; }
   #prov-list li { padding: .45rem .7rem; cursor: pointer; display: flex; justify-content: space-between; gap: 1rem; }
   #prov-list li .n { color: var(--ink-3); font-variant-numeric: tabular-nums; }
-  #prov-list li[aria-selected="true"] { background: #e8f0fa; }
+  #prov-list li[aria-selected="true"] { background: var(--hover); }
   #prov-list li.none { color: var(--ink-3); cursor: default; }
 
   /* tabella: sempre 10 righe di altezza fissa */
@@ -85,14 +151,14 @@
              vertical-align: bottom; }
   tbody tr { height: var(--row-h); }
   tbody td, tbody th { padding: 0 .4rem; border-bottom: 1px solid var(--rule-soft); vertical-align: middle; overflow: hidden; }
-  tbody tr:focus-within { background: #f4f7fb; }
+  tbody tr:focus-within { background: var(--row-focus); }
   .clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
            line-height: 1.25; overflow-wrap: break-word; }
   col.c-scuola { width: 54%; } col.c-comune { width: 31%; } col.c-evac { width: 15%; }
   .ev { display: inline-block; font-size: .78rem; font-weight: 600; padding: .05rem .4rem; border-radius: 3px; }
-  .ev-si { background: #fde8e4; color: #8a1c0c; }
-  .ev-no { background: #e7f3ec; color: #1d5a35; }
-  .ev-nd { background: #f0f0f0; color: #555; }
+  .ev-si { background: var(--ev-si-bg); color: var(--ev-si-fg); }
+  .ev-no { background: var(--ev-no-bg); color: var(--ev-no-fg); }
+  .ev-nd { background: var(--ev-nd-bg); color: var(--ev-nd-fg); }
   .muted { color: var(--ink-3); }
   .tbl-box { display: flex; flex-direction: column; }
   .tbl-box > * { flex: 1 1 auto; }
@@ -102,8 +168,8 @@
   .pager { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-top: .5rem;
            font-size: .85rem; min-height: 2.25rem; }
   .pager.off { visibility: hidden; }
-  .pager button { font: inherit; font-size: .85rem; padding: .4rem .75rem; border: 1px solid #8a8a8a;
-                  border-radius: 6px; background: #fff; color: var(--ink); cursor: pointer; min-width: 6.5rem; }
+  .pager button { font: inherit; font-size: .85rem; padding: .4rem .75rem; border: 1px solid var(--field-border);
+                  border-radius: 6px; background: var(--surface); color: var(--ink); cursor: pointer; min-width: 6.5rem; }
   .pager button:disabled { opacity: .45; cursor: default; }
   .pager button:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
   .pager .pos { color: var(--ink-2); font-variant-numeric: tabular-nums; }
@@ -115,7 +181,7 @@
   thead .short { display: none; }
   .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
              clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
-  .err { color: #8a1c0c; }
+  .err { color: var(--err); }
 
   @media (max-width: 420px) {
     :root { --row-h: 3.9rem; }
@@ -181,10 +247,9 @@
 (function () {
   "use strict";
   var PAGE = 10;
-  var COLORS = ["--c1", "--c2", "--c3", "--c4", "--c5"].map(function (v) {
-    return getComputedStyle(document.documentElement).getPropertyValue(v).trim();
-  });
-  var EMPTY = getComputedStyle(document.documentElement).getPropertyValue("--empty").trim();
+  // i colori restano variabili CSS: cambiano da soli quando cambia il tema
+  var COLORS = ["var(--c1)", "var(--c2)", "var(--c3)", "var(--c4)", "var(--c5)"];
+  var EMPTY = "var(--empty)";
   var EV_LABEL = { si: "sì", no: "no", nd: "nd" };
   var EV_TITLE = { si: "Evacuata", no: "Non evacuata", nd: "Dato non disponibile" };
   var MESI = ["gennaio","febbraio","marzo","aprile","maggio","giugno","luglio","agosto","settembre","ottobre","novembre","dicembre"];
@@ -245,7 +310,7 @@
 
   function renderLegend() {
     var ul = document.getElementById("legend");
-    var items = ['<li><span class="sw" style="background:' + EMPTY + ';outline:1px solid #cfcfcf;outline-offset:-1px"></span>Nessuna</li>'];
+    var items = ['<li><span class="sw" style="background:' + EMPTY + ';outline:1px solid var(--empty-outline);outline-offset:-1px"></span>Nessuna</li>'];
     classLabels.forEach(function (lab, k) {
       var lo = k === 0 ? 1 : breaks[k - 1];
       items.push('<li><span class="sw" style="background:' + colorOf(lo) + '"></span>' + esc(lab) + "</li>");
@@ -290,7 +355,7 @@
     paths = svg.append("g").selectAll("path").data(fc.features).join("path")
       .attr("class", "prov")
       .attr("d", path)
-      .attr("fill", function (d) {
+      .style("fill", function (d) {
         var p = provBySigla[d.properties.prov_acr];
         return colorOf(p ? p.n : 0);
       })
@@ -473,6 +538,16 @@
     lastH = h;
     window.parent.postMessage({ type: "scuole-allarme-bomba:height", height: h }, "*");
   }
+
+  // La pagina che incorpora l'iframe può impostare il tema:
+  // iframe.contentWindow.postMessage({ type: "scuole-allarme-bomba:theme", theme: "dark" | "light" | "auto" }, "*")
+  window.addEventListener("message", function (e) {
+    var d = e.data;
+    if (!d || d.type !== "scuole-allarme-bomba:theme") return;
+    if (d.theme === "dark" || d.theme === "light") document.documentElement.setAttribute("data-theme", d.theme);
+    else document.documentElement.removeAttribute("data-theme");
+    notifyHeight();
+  });
 
   // ------------------------------------------------------------- avvio --
   Promise.all([

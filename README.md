@@ -94,6 +94,32 @@ Il workflow `pages.yml` copia `index.html`, `vendor/` e i due file di `data/` ne
 Va servita via HTTP: aprendo `index.html` dal disco il browser blocca la lettura dei JSON
 (in locale: `python3 -m http.server` e poi `http://localhost:8000`).
 
+## Tema chiaro e scuro
+
+La pagina segue il tema del sistema (`prefers-color-scheme`). Dentro un iframe però
+"sistema" non è il tema del tuo sito, quindi ci sono due modi per allinearla:
+
+- **Indirizzo:** `…/allarme-bomba/?theme=dark` oppure `?theme=light` (si combina con la
+  provincia: `…/?theme=dark#RM`).
+- **Messaggio dalla pagina ospitante** (si adatta anche quando il lettore cambia tema):
+
+```html
+<script>
+  (function () {
+    var f = document.getElementById("scuole-allarme");
+    var mq = window.matchMedia("(prefers-color-scheme: dark)");
+    function send() {
+      // adatta la condizione al tuo sito, es. document.documentElement.classList.contains("dark")
+      f.contentWindow.postMessage({ type: "scuole-allarme-bomba:theme", theme: mq.matches ? "dark" : "light" }, "*");
+    }
+    f.addEventListener("load", send);
+    mq.addEventListener("change", send);
+  })();
+</script>
+```
+
+Valori ammessi: `"dark"`, `"light"`, `"auto"` (torna al tema del sistema).
+
 ## Incorporare in un iframe
 
 ```html
