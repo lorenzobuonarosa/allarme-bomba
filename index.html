@@ -89,7 +89,7 @@
   tbody tr:focus-within { background: #f4f7fb; }
   .clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
            line-height: 1.25; overflow-wrap: break-word; -webkit-hyphens: auto; hyphens: auto; }
-  col.c-scuola { width: 42%; } col.c-comune { width: 24%; } col.c-evac { width: 13%; } col.c-fonte { width: 21%; }
+  col.c-scuola { width: 54%; } col.c-comune { width: 31%; } col.c-evac { width: 15%; }
   .ev { display: inline-block; font-size: .78rem; font-weight: 600; padding: .05rem .4rem; border-radius: 3px; }
   .ev-si { background: #fde8e4; color: #8a1c0c; }
   .ev-no { background: #e7f3ec; color: #1d5a35; }
@@ -126,7 +126,7 @@
     body { font-size: 14px; }
     h1 { font-size: 1.2rem; }
     table { font-size: .76rem; }
-    col.c-scuola { width: 36%; } col.c-comune { width: 27%; } col.c-evac { width: 14%; } col.c-fonte { width: 23%; }
+    col.c-scuola { width: 50%; } col.c-comune { width: 33%; } col.c-evac { width: 17%; }
     thead th { font-size: .66rem; letter-spacing: 0; padding-left: .25rem; padding-right: .25rem;
                overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     tbody td, tbody th { padding: 0 .25rem !important; }
@@ -341,18 +341,17 @@
     var slice = rows.slice(start, start + PAGE);
     var html = ['<table><caption class="sr-only">Scuole segnalate' + (p ? " in provincia di " + esc(p.nome) : "") +
       ", righe " + (start + 1) + "–" + (start + slice.length) + " di " + rows.length + '</caption>',
-      '<colgroup><col class="c-scuola"><col class="c-comune"><col class="c-evac"><col class="c-fonte"></colgroup>',
-      '<thead><tr><th scope="col">Scuola</th><th scope="col">Comune</th><th scope="col"><span class="long">Evacuata</span><span class="short" aria-hidden="true">Evac.</span></th><th scope="col">Fonte</th></tr></thead><tbody>'];
+      '<colgroup><col class="c-scuola"><col class="c-comune"><col class="c-evac"></colgroup>',
+      '<thead><tr><th scope="col">Scuola</th><th scope="col">Comune</th><th scope="col"><span class="long">Evacuata</span><span class="short" aria-hidden="true">Evac.</span></th></tr></thead><tbody>'];
     for (var i = 0; i < PAGE; i++) {
       var s = slice[i];
-      if (!s) { html.push('<tr aria-hidden="true"><td></td><td></td><td></td><td></td></tr>'); continue; }
+      if (!s) { html.push('<tr aria-hidden="true"><td></td><td></td><td></td></tr>'); continue; }
       var ev = EV_LABEL[s.evacuata] ? s.evacuata : "nd";
       var comune = s.comune + (p ? "" : " (" + s.prov + ")");
       html.push("<tr>" +
         '<th scope="row" style="font-weight:500;text-align:left"><span class="clamp" title="' + esc(s.scuola) + '">' + esc(s.scuola) + "</span></th>" +
         '<td><span class="clamp">' + esc(comune) + "</span></td>" +
-        '<td><span class="ev ev-' + ev + '" title="' + EV_TITLE[ev] + '">' + EV_LABEL[ev] + "</span></td>" +
-        '<td><span class="clamp">' + esc(s.fonte || "—") + "</span></td></tr>");
+        '<td><span class="ev ev-' + ev + '" title="' + EV_TITLE[ev] + '">' + EV_LABEL[ev] + "</span></td></tr>");
     }
     html.push("</tbody></table>");
     boxEl.innerHTML = html.join("");
