@@ -6,9 +6,11 @@ che hanno ricevuto la mail minatoria dell'11 novembre 2026.
 ```
 index.html                    la pagina (D3 e topojson-client in vendor/, nessun backend)
 build_data.py                 data/scuole.csv -> data/scuole.json
-update_check.py               ricerca oraria di nuove scuole -> data/candidate.csv
-.github/workflows/update.yml  esecuzione oraria su GitHub Actions
-data/scuole.csv               dataset definitivo (si modifica solo a mano)
+add_schools.py                aggiunge a data/scuole.csv le scuole trovate dal task orario
+update_check.py               alternativa: ricerca via API -> data/candidate.csv (revisione)
+.github/workflows/update.yml  alternativa: update_check.py su GitHub Actions (cron spento)
+.github/workflows/pages.yml   ripubblica il sito nel branch gh-pages
+data/scuole.csv               dataset (righe aggiunte a mano o dal task orario)
 data/province.topojson        confini provinciali (110 unità, campo prov_acr)
 ```
 
@@ -35,7 +37,27 @@ Controlla che la somma per provincia sia uguale al numero di righe.
 Classi della legenda: quintili dei conteggi delle province con almeno una scuola
 (oggi 1, 2–3, 4–5, 6–9, 10 e più); province senza scuole in grigio.
 
-## Aggiornamento orario (in revisione, mai automatico)
+## Aggiornamento orario automatico (task schedulato di Claude Code)
+
+Ogni ora un task schedulato di Claude Code riprende la sessione che ha costruito il
+progetto e:
+
+1. cerca sul web articoli dell'11 novembre 2026 che nominano scuole raggiunte dalla mail
+   (esclusi 19 ottobre e 2 novembre), concentrandosi a rotazione su un gruppo di regioni;
+2. passa i risultati a `python3 add_schools.py <file.json>`, che scarta duplicati, righe
+   senza link e province che non sono nella mappa, accoda le nuove righe a
+   `data/scuole.csv` (senza toccare quelle esistenti, nota `aggiunta automatica …`) e
+   scrive una riga in `data/update_log.txt`;
+3. rilancia `python3 build_data.py` (aggiorna anche l'ora nel sottotitolo); se fallisce
+   non pubblica nulla;
+4. fa commit e push: `pages.yml` ripubblica il sito, l'iframe si aggiorna in pochi minuti.
+
+Le righe aggiunte in automatico non hanno coordinate (la mappa usa solo la provincia) e
+vanno ricontrollate quando possibile: si riconoscono dalla nota `aggiunta automatica`.
+Il task usa i limiti dell'abbonamento Claude, non una chiave API. Si sospende o si
+cancella dall'elenco dei task schedulati su claude.ai.
+
+## Alternativa: GitHub Actions con revisione manuale
 
 `update_check.py` usa l'API Anthropic con la ricerca web, scrive solo le scuole nuove in
 `data/candidate.csv` (con data e ora) e una riga in `data/update_log.txt`.
@@ -43,10 +65,11 @@ Non tocca `data/scuole.csv`.
 
 1. Nel repository: *Settings → Secrets and variables → Actions → New repository secret*,
    nome `ANTHROPIC_API_KEY`.
-2. Il workflow parte ogni ora (`0 * * * *`, UTC) solo dal branch predefinito; si può
-   avviare a mano da *Actions → Controllo orario nuove scuole → Run workflow*.
+2. In `.github/workflows/update.yml` togli il commento alle righe `schedule`/`cron`
+   (`0 * * * *`, UTC); si può anche avviare a mano da *Actions → Controllo orario nuove
+   scuole → Run workflow*.
 3. Quando ci sono candidate nuove apre una issue con etichetta `candidate`, o aggiunge un
-   commento a quella già aperta. Chiudi la issue dopo la revisione.
+   commento a quella già aperta.
 4. Revisione: copia a mano le righe verificate in `data/scuole.csv`, poi
    `python3 build_data.py`, commit e push.
 

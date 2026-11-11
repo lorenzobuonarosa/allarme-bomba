@@ -1,8 +1,10 @@
 name: Controllo orario nuove scuole
 
+# Alternativa al task orario di Claude Code (vedi README): richiede il secret
+# ANTHROPIC_API_KEY. Per riattivare il controllo orario togli il commento alle due righe.
 on:
-  schedule:
-    - cron: "0 * * * *"   # ogni ora (UTC); GitHub può ritardare l'avvio di qualche minuto
+  # schedule:
+  #   - cron: "0 * * * *"
   workflow_dispatch: {}    # avvio manuale dalla scheda Actions
 
 permissions:
