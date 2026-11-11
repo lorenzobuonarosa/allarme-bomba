@@ -40,7 +40,6 @@
             font-size: .78rem; color: var(--ink-2); list-style: none; padding: 0; }
   .legend li { display: inline-flex; align-items: center; gap: .35rem; }
   .sw { width: 14px; height: 14px; border-radius: 3px; display: inline-block; }
-  .legend-note { font-size: .72rem; color: var(--ink-3); margin: 0 0 .25rem; }
 
   /* mappa */
   .map-box { position: relative; }
@@ -143,7 +142,6 @@
   <section aria-labelledby="map-title">
     <h2 id="map-title" class="sr-only">Mappa per provincia</h2>
     <ul class="legend" id="legend" aria-label="Legenda: numero di scuole segnalate per provincia"></ul>
-    <p class="legend-note" id="legend-note"></p>
     <div class="map-box" id="map-box">
       <svg id="map" role="img" aria-label="Mappa delle province italiane colorate per numero di scuole segnalate"></svg>
       <div class="tip" id="tip" role="presentation"></div>
@@ -253,8 +251,6 @@
       items.push('<li><span class="sw" style="background:' + colorOf(lo) + '"></span>' + esc(lab) + "</li>");
     });
     ul.innerHTML = items.join("");
-    document.getElementById("legend-note").textContent =
-      "Scuole per provincia. Classi calcolate sui quintili delle province con almeno una scuola.";
   }
 
   function renderMap(topo) {
