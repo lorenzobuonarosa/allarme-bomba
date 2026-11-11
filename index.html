@@ -94,8 +94,6 @@
   .ev-si { background: #fde8e4; color: #8a1c0c; }
   .ev-no { background: #e7f3ec; color: #1d5a35; }
   .ev-nd { background: #f0f0f0; color: #555; }
-  td a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
-  td a:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; border-radius: 2px; }
   .muted { color: var(--ink-3); }
   .tbl-box { display: flex; flex-direction: column; }
   .tbl-box > * { flex: 1 1 auto; }
@@ -354,10 +352,7 @@
         '<th scope="row" style="font-weight:500;text-align:left"><span class="clamp" title="' + esc(s.scuola) + '">' + esc(s.scuola) + "</span></th>" +
         '<td><span class="clamp">' + esc(comune) + "</span></td>" +
         '<td><span class="ev ev-' + ev + '" title="' + EV_TITLE[ev] + '">' + EV_LABEL[ev] + "</span></td>" +
-        "<td>" + (s.url
-          ? '<a class="clamp" href="' + esc(s.url) + '" target="_blank" rel="noopener noreferrer">' + esc(s.fonte || "Link") +
-            '<span class="sr-only"> (si apre in una nuova finestra)</span></a>'
-          : '<span class="clamp muted">' + esc(s.fonte || "—") + "</span>") + "</td></tr>");
+        '<td><span class="clamp">' + esc(s.fonte || "—") + "</span></td></tr>");
     }
     html.push("</tbody></table>");
     boxEl.innerHTML = html.join("");

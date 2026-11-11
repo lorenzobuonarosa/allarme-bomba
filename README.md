@@ -66,15 +66,15 @@ ANTHROPIC_API_KEY=... python3 update_check.py
 
 ## Pubblicare su GitHub Pages
 
-*Settings → Pages → Build and deployment → Deploy from a branch*, branch `main`, cartella
-`/ (root)`. La pagina sarà su `https://<utente>.github.io/<repository>/`.
+Il workflow `pages.yml` copia `index.html`, `vendor/` e i due file di `data/` nel branch `gh-pages` a ogni push che li modifica. In *Settings → Pages* la sorgente deve essere *Deploy from a branch*, branch `gh-pages`, cartella
+`/ (root)`. La pagina sarà su `https://lorenzobuonarosa.github.io/allarme-bomba/`.
 Va servita via HTTP: aprendo `index.html` dal disco il browser blocca la lettura dei JSON
 (in locale: `python3 -m http.server` e poi `http://localhost:8000`).
 
 ## Incorporare in un iframe
 
 ```html
-<iframe src="https://<utente>.github.io/<repository>/" title="Scuole con allarme bomba dell'11 novembre"
+<iframe src="https://lorenzobuonarosa.github.io/allarme-bomba/" title="Scuole con allarme bomba dell'11 novembre"
         style="width:100%;border:0;height:1500px" loading="lazy" id="scuole-allarme"></iframe>
 <script>
   window.addEventListener("message", function (e) {
