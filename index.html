@@ -1,0 +1,512 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scuole con allarme bomba</title>
+<meta name="description" content="Le scuole italiane che hanno ricevuto la mail minatoria dell'11 novembre 2026, per provincia.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #ffffff;
+    --ink: #1a1a1a;
+    --ink-2: #4a4a4a;      /* testo secondario: 8.9:1 su bianco */
+    --ink-3: #636363;      /* note: 6.0:1 su bianco */
+    --rule: #d9d9d9;
+    --rule-soft: #ececec;
+    --accent: #1b5596;
+    --focus: #0b57d0;
+    --empty: #e6e6e6;      /* province senza scuole: grigio chiaro, non bianco */
+    --c1: #8db9e2; --c2: #5e9bd3; --c3: #3478bb; --c4: #1b5596; --c5: #0b3263;
+    --row-h: 3.25rem;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 15px; line-height: 1.45;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 16px 16px 24px; }
+  h1 { font-size: 1.375rem; line-height: 1.2; font-weight: 700; margin: 0 0 .35rem; letter-spacing: -.01em; }
+  .sub { color: var(--ink-2); margin: 0 0 .75rem; font-size: .9rem; }
+  .sub strong { color: var(--ink); font-weight: 600; }
+  h2 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 .5rem; }
+
+  /* legenda */
+  .legend { display: flex; flex-wrap: wrap; gap: .25rem .9rem; align-items: center; margin: 0 0 .5rem;
+            font-size: .78rem; color: var(--ink-2); list-style: none; padding: 0; }
+  .legend li { display: inline-flex; align-items: center; gap: .35rem; }
+  .sw { width: 14px; height: 14px; border-radius: 3px; display: inline-block; }
+  .legend-note { font-size: .72rem; color: var(--ink-3); margin: 0 0 .25rem; }
+
+  /* mappa */
+  .map-box { position: relative; }
+  #map { display: block; width: 100%; height: auto; max-height: 78vh; margin: 0 auto; }
+  #map path.prov { stroke: #ffffff; stroke-width: .6; stroke-linejoin: round; cursor: pointer; }
+  #map path.prov:hover { stroke: var(--ink); stroke-width: 1.2; }
+  #map path.sel { stroke: var(--ink); stroke-width: 1.6; }
+  .tip { position: absolute; pointer-events: none; background: #fff; border: 1px solid var(--rule);
+         border-radius: 6px; padding: .35rem .55rem; font-size: .8rem; line-height: 1.3;
+         box-shadow: 0 2px 8px rgba(0,0,0,.12); white-space: nowrap; opacity: 0; transition: opacity .08s; }
+  .tip b { font-weight: 600; display: block; }
+
+  /* ricerca (combobox) */
+  .search { position: relative; margin: 0 0 .6rem; }
+  .search label { display: block; font-size: .8rem; font-weight: 500; color: var(--ink-2); margin-bottom: .25rem; }
+  .search .field { position: relative; }
+  .search input {
+    width: 100%; font: inherit; font-size: 1rem; padding: .55rem 2.4rem .55rem .7rem;
+    border: 1px solid #8a8a8a; border-radius: 6px; background: #fff; color: var(--ink);
+  }
+  .search input:focus { outline: 2px solid var(--focus); outline-offset: 1px; border-color: var(--focus); }
+  .clear { position: absolute; right: .25rem; top: 50%; transform: translateY(-50%); border: 0;
+           background: none; font: inherit; font-size: 1.2rem; line-height: 1; width: 2rem; height: 2rem;
+           border-radius: 4px; color: var(--ink-2); cursor: pointer; }
+  .clear:focus-visible { outline: 2px solid var(--focus); }
+  .clear[hidden] { display: none; }
+  #prov-list { position: absolute; z-index: 5; left: 0; right: 0; top: 100%; margin: 2px 0 0; padding: 4px 0;
+               list-style: none; background: #fff; border: 1px solid var(--rule); border-radius: 6px;
+               box-shadow: 0 4px 14px rgba(0,0,0,.12); max-height: 15rem; overflow-y: auto; }
+  #prov-list[hidden] { display: none; }
+  #prov-list li { padding: .45rem .7rem; cursor: pointer; display: flex; justify-content: space-between; gap: 1rem; }
+  #prov-list li .n { color: var(--ink-3); font-variant-numeric: tabular-nums; }
+  #prov-list li[aria-selected="true"] { background: #e8f0fa; }
+  #prov-list li.none { color: var(--ink-3); cursor: default; }
+
+  /* tabella: sempre 10 righe di altezza fissa */
+  .status { font-size: .85rem; color: var(--ink-2); margin: 0 0 .35rem; min-height: 1.3em; }
+  .status strong { color: var(--ink); }
+  .tbl-box { min-height: calc(var(--row-h) * 10 + 2.4rem); }
+  table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: .85rem; }
+  thead th { text-align: left; font-weight: 600; font-size: .75rem; color: var(--ink-2); text-transform: uppercase;
+             letter-spacing: .03em; padding: 0 .4rem .45rem; border-bottom: 2px solid var(--ink); height: 2.4rem;
+             vertical-align: bottom; }
+  tbody tr { height: var(--row-h); }
+  tbody td, tbody th { padding: 0 .4rem; border-bottom: 1px solid var(--rule-soft); vertical-align: middle; overflow: hidden; }
+  tbody tr:focus-within { background: #f4f7fb; }
+  .clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+           line-height: 1.25; overflow-wrap: break-word; -webkit-hyphens: auto; hyphens: auto; }
+  col.c-scuola { width: 42%; } col.c-comune { width: 24%; } col.c-evac { width: 13%; } col.c-fonte { width: 21%; }
+  .ev { display: inline-block; font-size: .78rem; font-weight: 600; padding: .05rem .4rem; border-radius: 3px; }
+  .ev-si { background: #fde8e4; color: #8a1c0c; }
+  .ev-no { background: #e7f3ec; color: #1d5a35; }
+  .ev-nd { background: #f0f0f0; color: #555; }
+  td a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+  td a:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; border-radius: 2px; }
+  .muted { color: var(--ink-3); }
+  .tbl-box { display: flex; flex-direction: column; }
+  .tbl-box > * { flex: 1 1 auto; }
+  .empty-msg { display: flex; align-items: center; justify-content: center; text-align: center;
+               min-height: calc(var(--row-h) * 10 + 2.4rem); padding: 1rem; border: 1px dashed var(--rule);
+               border-radius: 6px; color: var(--ink-2); }
+  .pager { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-top: .5rem;
+           font-size: .85rem; min-height: 2.25rem; }
+  .pager.off { visibility: hidden; }
+  .pager button { font: inherit; font-size: .85rem; padding: .4rem .75rem; border: 1px solid #8a8a8a;
+                  border-radius: 6px; background: #fff; color: var(--ink); cursor: pointer; min-width: 6.5rem; }
+  .pager button:disabled { opacity: .45; cursor: default; }
+  .pager button:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+  .pager .pos { color: var(--ink-2); font-variant-numeric: tabular-nums; }
+
+  .note { margin-top: 1.5rem; padding-top: .75rem; border-top: 1px solid var(--rule); font-size: .78rem;
+          color: var(--ink-3); }
+  .note h2 { font-size: .8rem; margin: 0 0 .25rem; color: var(--ink-2); }
+  .note p { margin: 0; }
+  thead .short { display: none; }
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+             clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+  .err { color: #8a1c0c; }
+
+  @media (max-width: 420px) {
+    :root { --row-h: 3.9rem; }
+    thead .short { display: inline; }
+    thead .long { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; }
+    .clamp { -webkit-line-clamp: 3; line-height: 1.2; }
+    body { font-size: 14px; }
+    h1 { font-size: 1.2rem; }
+    table { font-size: .76rem; }
+    col.c-scuola { width: 36%; } col.c-comune { width: 27%; } col.c-evac { width: 14%; } col.c-fonte { width: 23%; }
+    thead th { font-size: .66rem; letter-spacing: 0; padding-left: .25rem; padding-right: .25rem;
+               overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    tbody td, tbody th { padding: 0 .25rem !important; }
+  }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header>
+    <h1>Le scuole con allarme bomba dell'11 novembre</h1>
+    <p class="sub" id="sub">Caricamento dei dati…</p>
+  </header>
+
+  <section aria-labelledby="map-title">
+    <h2 id="map-title" class="sr-only">Mappa per provincia</h2>
+    <ul class="legend" id="legend" aria-label="Legenda: numero di scuole segnalate per provincia"></ul>
+    <p class="legend-note" id="legend-note"></p>
+    <div class="map-box" id="map-box">
+      <svg id="map" role="img" aria-label="Mappa delle province italiane colorate per numero di scuole segnalate"></svg>
+      <div class="tip" id="tip" role="presentation"></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="tbl-title">
+    <h2 id="tbl-title">Le scuole per provincia</h2>
+    <div class="search">
+      <label for="prov-input" id="prov-label">Cerca una provincia (nome o sigla)</label>
+      <div class="field">
+        <input id="prov-input" type="text" role="combobox" autocomplete="off" spellcheck="false"
+               aria-autocomplete="list" aria-expanded="false" aria-controls="prov-list"
+               placeholder="Es. Roma oppure RM">
+        <button type="button" class="clear" id="prov-clear" aria-label="Mostra tutte le province" hidden>×</button>
+        <ul id="prov-list" role="listbox" aria-labelledby="prov-label" hidden></ul>
+      </div>
+    </div>
+    <p class="status" id="status" aria-live="polite"></p>
+    <div class="tbl-box" id="tbl-box"></div>
+    <nav class="pager off" id="pager" aria-label="Pagine della tabella">
+      <button type="button" id="prev">‹ Precedenti</button>
+      <span class="pos" id="pos"></span>
+      <button type="button" id="next">Successive ›</button>
+    </nav>
+  </section>
+
+  <footer class="note">
+    <h2>Nota metodologica</h2>
+    <p>Dati dell'11 novembre 2026 raccolti da fonti giornalistiche locali e nazionali che citano la scuola per nome. Il conteggio indica le scuole che hanno ricevuto la mail minatoria, non quelle evacuate: l'evacuazione è nota solo per una parte. Escluse le scuole colpite solo il 19 ottobre o il 2 novembre. Dove la fonte scrive solo "liceo classico di Arezzo" il nome è dedotto dall'anagrafe scolastica. Elenco in aggiornamento: possibili omissioni.</p>
+  </footer>
+</main>
+
+<script src="vendor/d3.min.js"></script>
+<script src="vendor/topojson-client.min.js"></script>
+<script>
+(function () {
+  "use strict";
+  var PAGE = 10;
+  var COLORS = ["--c1", "--c2", "--c3", "--c4", "--c5"].map(function (v) {
+    return getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  });
+  var EMPTY = getComputedStyle(document.documentElement).getPropertyValue("--empty").trim();
+  var EV_LABEL = { si: "sì", no: "no", nd: "nd" };
+  var EV_TITLE = { si: "Evacuata", no: "Non evacuata", nd: "Dato non disponibile" };
+  var MESI = ["gennaio","febbraio","marzo","aprile","maggio","giugno","luglio","agosto","settembre","ottobre","novembre","dicembre"];
+
+  var state = { prov: null, page: 0 };
+  var tableH = 0;
+  var data, provBySigla = {}, schoolsByProv = {}, paths;
+
+  function norm(s) {
+    return (s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
+      .replace(/[^a-z0-9]+/g, " ").trim();
+  }
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+  function fmtNum(n) { return n.toLocaleString("it-IT"); }
+  function fmtUpdated(iso) {
+    // iso: "2026-11-11T13:00+01:00" (ora di Roma scritta da build_data.py)
+    var m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(iso || "");
+    if (!m) return iso || "";
+    return (+m[3]) + " " + MESI[+m[2] - 1] + " " + m[1] + ", ore " + m[4] + ":" + m[5];
+  }
+
+  // ------------------------------------------------------------- classi --
+  var breaks, classLabels;
+  function classOf(n) {
+    if (!n) return -1;
+    var k = 0;
+    while (k < breaks.length && n >= breaks[k]) k++;
+    return k;
+  }
+  function buildClasses(b) {
+    breaks = b;
+    var lows = [1].concat(b);
+    classLabels = lows.map(function (lo, i) {
+      if (i === lows.length - 1) return lo + " e più";
+      var hi = lows[i + 1] - 1;
+      return lo === hi ? String(lo) : lo + "–" + hi;
+    });
+  }
+  function colorOf(n) {
+    var k = classOf(n);
+    if (k < 0) return EMPTY;
+    // con meno di 5 classi usa i toni più distanti della scala
+    var idx = classLabels.length >= 5 ? k : Math.round(k * 4 / Math.max(1, classLabels.length - 1));
+    return COLORS[idx];
+  }
+
+  // ----------------------------------------------------------- render --
+  function renderHeader() {
+    var m = data.meta;
+    document.getElementById("sub").innerHTML =
+      "<strong>" + fmtNum(m.total) + " scuole</strong> segnalate in <strong>" + m.province_coinvolte +
+      " province</strong> · Ultimo aggiornamento: " + esc(fmtUpdated(m.updated));
+  }
+
+  function renderLegend() {
+    var ul = document.getElementById("legend");
+    var items = ['<li><span class="sw" style="background:' + EMPTY + ';outline:1px solid #cfcfcf;outline-offset:-1px"></span>Nessuna</li>'];
+    classLabels.forEach(function (lab, k) {
+      var lo = k === 0 ? 1 : breaks[k - 1];
+      items.push('<li><span class="sw" style="background:' + colorOf(lo) + '"></span>' + esc(lab) + "</li>");
+    });
+    ul.innerHTML = items.join("");
+    document.getElementById("legend-note").textContent =
+      "Scuole per provincia. Classi calcolate sui quintili delle province con almeno una scuola.";
+  }
+
+  function renderMap(topo) {
+    var obj = topo.objects[Object.keys(topo.objects)[0]];
+    var fc = topojson.feature(topo, obj);
+    var W = 600;
+    var proj = d3.geoConicConformal().parallels([38, 46]).rotate([-12.5, 0]);
+    proj.fitWidth(W - 8, fc);
+    var path = d3.geoPath(proj);
+    var b = path.bounds(fc);
+    var H = Math.ceil(b[1][1] + 4);
+    var svg = d3.select("#map").attr("viewBox", "0 0 " + W + " " + H)
+      .attr("preserveAspectRatio", "xMidYMid meet");
+
+    var top = data.province.slice().sort(function (a, b) { return b.n - a.n; }).slice(0, 3)
+      .map(function (p) { return p.nome + " " + p.n; }).join(", ");
+    svg.attr("aria-label", "Mappa delle province italiane colorate per numero di scuole segnalate. " +
+      "Province con più scuole: " + top + ". Per filtrare la tabella da tastiera usa il campo di ricerca sotto la mappa.");
+
+    var tip = document.getElementById("tip"), box = document.getElementById("map-box");
+    function showTip(ev, d) {
+      var p = provBySigla[d.properties.prov_acr];
+      var n = p ? p.n : 0;
+      tip.innerHTML = "<b>" + esc(p ? p.nome : d.properties.prov_name) + "</b>" +
+        (n === 0 ? "Nessuna scuola" : n === 1 ? "1 scuola" : fmtNum(n) + " scuole");
+      var r = box.getBoundingClientRect();
+      var x = ev.clientX - r.left, y = ev.clientY - r.top;
+      tip.style.opacity = 1;
+      var tw = tip.offsetWidth, th = tip.offsetHeight;
+      var left = Math.min(Math.max(4, x + 12), r.width - tw - 4);
+      if (x + 12 + tw > r.width) left = Math.max(4, x - tw - 12);
+      tip.style.left = left + "px";
+      tip.style.top = Math.max(4, y - th - 10) + "px";
+    }
+    function hideTip() { tip.style.opacity = 0; }
+
+    paths = svg.append("g").selectAll("path").data(fc.features).join("path")
+      .attr("class", "prov")
+      .attr("d", path)
+      .attr("fill", function (d) {
+        var p = provBySigla[d.properties.prov_acr];
+        return colorOf(p ? p.n : 0);
+      })
+      .on("pointermove", showTip)
+      .on("pointerleave", hideTip)
+      .on("click", function (ev, d) {
+        showTip(ev, d);
+        selectProv(d.properties.prov_acr);
+      });
+  }
+
+  function highlight() {
+    if (!paths) return;
+    paths.classed("sel", function (d) { return d.properties.prov_acr === state.prov; });
+    paths.filter(".sel").raise();
+  }
+
+  function currentRows() {
+    return state.prov ? (schoolsByProv[state.prov] || []) : data.scuole;
+  }
+
+  function renderTable() {
+    var rows = currentRows();
+    var p = state.prov ? provBySigla[state.prov] : null;
+    var pages = Math.max(1, Math.ceil(rows.length / PAGE));
+    state.page = Math.min(state.page, pages - 1);
+    var status = document.getElementById("status");
+    var boxEl = document.getElementById("tbl-box");
+    var pager = document.getElementById("pager");
+
+    if (p && rows.length === 0) {
+      status.innerHTML = "<strong>" + esc(p.nome) + " (" + esc(p.sigla) + ")</strong>";
+      boxEl.innerHTML = '<div class="empty-msg" role="status">Nessuna scuola segnalata in provincia di ' +
+        esc(p.nome) + " nei dati raccolti finora.</div>";
+      pager.classList.add("off");
+      return;
+    }
+
+    status.innerHTML = p
+      ? "<strong>" + esc(p.nome) + " (" + esc(p.sigla) + ")</strong>: " + (rows.length === 1 ? "1 scuola" : fmtNum(rows.length) + " scuole")
+      : "<strong>Tutte le province</strong>: " + fmtNum(rows.length) + " scuole. Scegli una provincia per filtrare.";
+
+    var start = state.page * PAGE;
+    var slice = rows.slice(start, start + PAGE);
+    var html = ['<table><caption class="sr-only">Scuole segnalate' + (p ? " in provincia di " + esc(p.nome) : "") +
+      ", righe " + (start + 1) + "–" + (start + slice.length) + " di " + rows.length + '</caption>',
+      '<colgroup><col class="c-scuola"><col class="c-comune"><col class="c-evac"><col class="c-fonte"></colgroup>',
+      '<thead><tr><th scope="col">Scuola</th><th scope="col">Comune</th><th scope="col"><span class="long">Evacuata</span><span class="short" aria-hidden="true">Evac.</span></th><th scope="col">Fonte</th></tr></thead><tbody>'];
+    for (var i = 0; i < PAGE; i++) {
+      var s = slice[i];
+      if (!s) { html.push('<tr aria-hidden="true"><td></td><td></td><td></td><td></td></tr>'); continue; }
+      var ev = EV_LABEL[s.evacuata] ? s.evacuata : "nd";
+      var comune = s.comune + (p ? "" : " (" + s.prov + ")");
+      html.push("<tr>" +
+        '<th scope="row" style="font-weight:500;text-align:left"><span class="clamp" title="' + esc(s.scuola) + '">' + esc(s.scuola) + "</span></th>" +
+        '<td><span class="clamp">' + esc(comune) + "</span></td>" +
+        '<td><span class="ev ev-' + ev + '" title="' + EV_TITLE[ev] + '">' + EV_LABEL[ev] + "</span></td>" +
+        "<td>" + (s.url
+          ? '<a class="clamp" href="' + esc(s.url) + '" target="_blank" rel="noopener noreferrer">' + esc(s.fonte || "Link") +
+            '<span class="sr-only"> (si apre in una nuova finestra)</span></a>'
+          : '<span class="clamp muted">' + esc(s.fonte || "—") + "</span>") + "</td></tr>");
+    }
+    html.push("</tbody></table>");
+    boxEl.innerHTML = html.join("");
+    // fissa l'altezza misurata della tabella: il messaggio "nessuna scuola" occupa lo stesso spazio
+    var th = Math.ceil(boxEl.firstChild.getBoundingClientRect().height);
+    if (th > tableH) { tableH = th; boxEl.style.minHeight = th + "px"; }
+
+    pager.classList.toggle("off", rows.length <= PAGE);
+    document.getElementById("prev").disabled = state.page === 0;
+    document.getElementById("next").disabled = state.page >= pages - 1;
+    document.getElementById("pos").textContent = (start + 1) + "–" + (start + slice.length) + " di " + rows.length;
+  }
+
+  function selectProv(sigla) {
+    document.getElementById("tip").style.opacity = 0;
+    state.prov = sigla && provBySigla[sigla] ? sigla : null;
+    state.page = 0;
+    var input = document.getElementById("prov-input");
+    var p = state.prov ? provBySigla[state.prov] : null;
+    input.value = p ? p.nome + " (" + p.sigla + ")" : "";
+    document.getElementById("prov-clear").hidden = !p;
+    highlight();
+    renderTable();
+    notifyHeight();
+  }
+
+  // --------------------------------------------------------- combobox --
+  function setupCombobox() {
+    var input = document.getElementById("prov-input");
+    var list = document.getElementById("prov-list");
+    var clear = document.getElementById("prov-clear");
+    var opts = [], active = -1;
+    var index = data.province.map(function (p) {
+      return { p: p, key: norm(p.nome), sig: p.sigla.toLowerCase() };
+    });
+
+    function matches(q) {
+      q = norm(q).replace(/ \([a-z]{2}\)$/, "");
+      if (!q) return index.slice();
+      var starts = [], contains = [];
+      index.forEach(function (it) {
+        if (it.sig === q || it.key.indexOf(q) === 0 || it.key.split(" ").some(function (w) { return w.indexOf(q) === 0; })) starts.push(it);
+        else if (it.key.indexOf(q) > -1) contains.push(it);
+      });
+      starts.sort(function (a, b) { return (b.sig === q) - (a.sig === q); });
+      return starts.concat(contains);
+    }
+    function open(q) {
+      opts = matches(q);
+      active = opts.length ? 0 : -1;
+      if (!opts.length) {
+        list.innerHTML = '<li class="none" role="option" aria-disabled="true">Nessuna provincia trovata</li>';
+      } else {
+        list.innerHTML = opts.map(function (it, i) {
+          return '<li role="option" id="opt-' + it.p.sigla + '" data-i="' + i + '" aria-selected="' + (i === active) + '">' +
+            "<span>" + esc(it.p.nome) + " (" + esc(it.p.sigla) + ')</span><span class="n">' + it.p.n + "</span></li>";
+        }).join("");
+      }
+      list.hidden = false;
+      input.setAttribute("aria-expanded", "true");
+      sync();
+    }
+    function close() {
+      list.hidden = true;
+      input.setAttribute("aria-expanded", "false");
+      input.removeAttribute("aria-activedescendant");
+    }
+    function sync() {
+      Array.prototype.forEach.call(list.querySelectorAll("li[data-i]"), function (li) {
+        var on = +li.dataset.i === active;
+        li.setAttribute("aria-selected", on);
+        if (on) li.scrollIntoView({ block: "nearest" });
+      });
+      if (active > -1) input.setAttribute("aria-activedescendant", "opt-" + opts[active].p.sigla);
+      else input.removeAttribute("aria-activedescendant");
+    }
+    function choose(i) {
+      if (i < 0 || !opts[i]) return;
+      close();
+      selectProv(opts[i].p.sigla);
+    }
+
+    input.addEventListener("input", function () { open(input.value); });
+    input.addEventListener("focus", function () { input.select(); });
+    input.addEventListener("click", function () { if (list.hidden) open(""); });
+    input.addEventListener("keydown", function (e) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        if (list.hidden) { open(state.prov ? "" : input.value); return; }
+        if (opts.length) { active = (active + 1) % opts.length; sync(); }
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        if (!list.hidden && opts.length) { active = (active - 1 + opts.length) % opts.length; sync(); }
+      } else if (e.key === "Enter") {
+        if (!list.hidden) { e.preventDefault(); choose(active); }
+      } else if (e.key === "Escape") {
+        if (!list.hidden) { e.preventDefault(); close(); }
+        else if (state.prov) { selectProv(null); }
+      }
+    });
+    input.addEventListener("blur", function () {
+      setTimeout(function () {
+        close();
+        // se il testo non corrisponde più alla provincia scelta, ripristina
+        var p = state.prov ? provBySigla[state.prov] : null;
+        if (input.value.trim() === "") { if (p) selectProv(null); }
+        else input.value = p ? p.nome + " (" + p.sigla + ")" : "";
+      }, 150);
+    });
+    list.addEventListener("mousedown", function (e) { e.preventDefault(); });
+    list.addEventListener("click", function (e) {
+      var li = e.target.closest("li[data-i]");
+      if (li) choose(+li.dataset.i);
+    });
+    clear.addEventListener("click", function () { selectProv(null); input.focus(); });
+  }
+
+  // --------------------------------------------- altezza per l'iframe --
+  var lastH = 0;
+  function notifyHeight() {
+    var h = Math.ceil(document.documentElement.scrollHeight);
+    if (h === lastH || window.parent === window) return;
+    lastH = h;
+    window.parent.postMessage({ type: "scuole-allarme-bomba:height", height: h }, "*");
+  }
+
+  // ------------------------------------------------------------- avvio --
+  Promise.all([
+    fetch("data/scuole.json", { cache: "no-cache" }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }),
+    fetch("data/province.topojson").then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+  ]).then(function (res) {
+    data = res[0];
+    data.province.forEach(function (p) { provBySigla[p.sigla] = p; });
+    data.scuole.forEach(function (s) { (schoolsByProv[s.prov] = schoolsByProv[s.prov] || []).push(s); });
+    buildClasses(data.meta.breaks);
+    renderHeader();
+    renderLegend();
+    renderMap(res[1]);
+    setupCombobox();
+    document.getElementById("prev").addEventListener("click", function () { state.page--; renderTable(); });
+    document.getElementById("next").addEventListener("click", function () { state.page++; renderTable(); });
+    var hash = decodeURIComponent(location.hash.slice(1)).toUpperCase();
+    selectProv(provBySigla[hash] ? hash : null);
+    if ("ResizeObserver" in window) new ResizeObserver(notifyHeight).observe(document.body);
+    window.addEventListener("load", notifyHeight);
+  }).catch(function (err) {
+    document.getElementById("sub").innerHTML = '<span class="err">Impossibile caricare i dati (' + esc(err.message) + ").</span>";
+  });
+})();
+</script>
+</body>
+</html>

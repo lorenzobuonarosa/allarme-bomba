@@ -1,0 +1,69 @@
+name: Controllo orario nuove scuole
+
+on:
+  schedule:
+    - cron: "0 * * * *"   # ogni ora (UTC); GitHub può ritardare l'avvio di qualche minuto
+  workflow_dispatch: {}    # avvio manuale dalla scheda Actions
+
+permissions:
+  contents: write   # commit di candidate.csv e del log
+  issues: write     # apertura/aggiornamento della issue
+
+concurrency:
+  group: update-check
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Installa il client Anthropic
+        run: pip install "anthropic>=2.8,<3"
+
+      - name: Cerca nuove scuole
+        id: check
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ISSUE_BODY_PATH: ${{ runner.temp }}/issue_body.md
+          # UPDATE_MODEL: claude-sonnet-5-5   # circa metà costo
+          # UPDATE_MAX_SEARCHES: "6"
+          # UPDATE_MAX_CALLS_PER_HOUR: "4"
+        run: python update_check.py
+
+      - name: Committa candidate e log
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for f in data/update_log.txt data/update_state.json data/candidate.csv; do
+            if [ -f "$f" ]; then git add "$f"; fi
+          done
+          if git diff --cached --quiet; then
+            echo "Niente da committare"
+            exit 0
+          fi
+          git commit -m "Controllo orario: ${{ steps.check.outputs.new_candidates || 0 }} nuove candidate"
+          for i in 1 2 3; do
+            git pull --rebase --quiet && git push && break
+            sleep $((i * 5))
+          done
+
+      - name: Apri o aggiorna la issue
+        if: steps.check.outputs.new_candidates != '' && steps.check.outputs.new_candidates != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BODY: ${{ runner.temp }}/issue_body.md
+        run: |
+          gh label create candidate --color 1b5596 --description "Scuole candidate da verificare" 2>/dev/null || true
+          num=$(gh issue list --label candidate --state open --limit 1 --json number --jq '.[0].number // empty')
+          if [ -z "$num" ]; then
+            gh issue create --title "Nuove scuole candidate da verificare" --label candidate --body-file "$BODY"
+          else
+            gh issue comment "$num" --body-file "$BODY"
+          fi
